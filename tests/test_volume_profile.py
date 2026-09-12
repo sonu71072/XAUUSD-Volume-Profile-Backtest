@@ -1,6 +1,6 @@
 import pandas as pd
 
-from volume_profile import calculate_volume_profile
+from src.volume_profile import calculate_volume_profile
 
 
 # ---------------------------------------
