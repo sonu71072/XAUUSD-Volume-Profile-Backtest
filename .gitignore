@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -8,24 +8,22 @@ __pycache__/
 venv/
 env/
 
-# VS Code
+# IDE / notebooks
 .vscode/
-
-# Jupyter
 .ipynb_checkpoints/
 
-# Data files
+# Data
 data/*.csv
 
-# Backtest results
+# Generated results
 results/*.csv
 results/*.png
 
-# Environment / secrets
+# Secrets
 .env
 *.key
 *.pem
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
