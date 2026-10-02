@@ -406,3 +406,84 @@ Negative expectancy
         ↓
 Next research stage
 Transaction-cost modelling
+
+
+---
+
+## 18. V3 Transaction Cost Model
+
+V3 evaluates the existing V2 trade set under hypothetical transaction-cost scenarios.
+
+The V2 trade logic itself is not modified. Instead, spread, commission, and slippage assumptions are applied to the exported V2 trades.
+
+### Important Assumption
+
+The current V3 cost parameters are **research sensitivity scenarios**, not verified broker-specific execution costs.
+
+Actual trading costs can vary with:
+
+- Broker
+- Account type
+- Market conditions
+- Time of day
+- Liquidity
+- Spread conditions
+- Execution quality
+- Commission schedule
+
+Therefore, V3 results should not be interpreted as actual live-trading costs.
+
+### Cost Scenarios
+
+| Scenario | Spread | Commission | Slippage |
+|---|---:|---:|---:|
+| BASELINE | 0.00 | 0.00R | 0.00 |
+| LOW COST | 0.10 | 0.02R | 0.05 |
+| MEDIUM COST | 0.20 | 0.04R | 0.10 |
+| HIGH COST | 0.40 | 0.08R | 0.20 |
+
+The price-based costs are converted into R using the original trade's entry-to-stop risk distance.
+
+---
+
+## 19. V3 Results
+
+All four scenarios contain the same 124 V2 trades. Transaction costs reduce the R outcome while leaving the original trade win/loss classification unchanged.
+
+| Scenario | Trades | Win Rate | Total R | Average R | Profit Factor | Max DD |
+|---|---:|---:|---:|---:|---:|---:|
+| BASELINE | 124 | 28.23% | -18.74R | -0.151R | 0.789 | -23.74R |
+| LOW COST | 124 | 28.23% | -26.12R | -0.211R | 0.723 | -30.80R |
+| MEDIUM COST | 124 | 28.23% | -33.49R | -0.270R | 0.664 | -37.85R |
+| HIGH COST | 124 | 28.23% | -48.23R | -0.389R | 0.563 | -51.95R |
+
+### Total Cost Impact
+
+| Scenario | Total Cost |
+|---|---:|
+| BASELINE | 0.00R |
+| LOW COST | 7.37R |
+| MEDIUM COST | 14.75R |
+| HIGH COST | 29.49R |
+
+The V3 analysis shows how increasing assumed transaction costs progressively reduces the strategy's R-based performance.
+
+Because the underlying V2 result is already negative before costs, the cost scenarios make the resulting R performance more negative.
+
+This is a sensitivity analysis rather than evidence of actual broker execution performance.
+
+---
+
+## 20. V3 Research Status
+
+```text
+V2 Causal Strategy
+        ↓
+V2 Structural Validation
+        ↓
+V3 Transaction Cost Model
+        ↓
+Hypothetical Cost Sensitivity
+        ↓
+Next
+Out-of-Sample / Walk-Forward Testing
