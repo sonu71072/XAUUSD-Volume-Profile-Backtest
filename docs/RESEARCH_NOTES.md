@@ -738,3 +738,25 @@ The only strategy change from V5 is:
 ```text
 V5 body ratio threshold: >= 0.50
 V6 body ratio threshold: >= 0.70
+
+
+
+# 24. V7 POC-Only Experiment
+
+## Objective
+
+V7 tests whether restricting the validated V6 setup to the Point of Control (POC) improves historical robustness.
+
+V6 allowed signals at POC, VAH and VAL with a signal-candle body ratio of at least 0.70.
+
+V7 removes VAH and VAL entries and permits signals only at POC.
+
+This was a predefined structural hypothesis. The OOS period was not used to select the POC-only rule.
+
+## V7 Rule Change
+
+The V7 change is:
+
+```text
+V6: POC + VAH + VAL
+V7: POC only
