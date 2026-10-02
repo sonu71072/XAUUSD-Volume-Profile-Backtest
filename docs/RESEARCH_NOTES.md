@@ -1,66 +1,66 @@
 # V1 Research Notes
 
-## 1. Research Objective
+## 1\. Research Objective
 
 The objective of this project is to build a reproducible Python research framework for evaluating a mechanically defined XAUUSD M5 scalping strategy based on session-specific Fixed Range Volume Profile levels.
 
 The project is not intended to establish profitability from a single historical backtest. The longer-term objective is to determine whether the strategy remains statistically and economically meaningful after controlling for information timing, transaction costs, execution assumptions, and out-of-sample performance.
 
----
+\---
 
-## 2. Data
+## 2\. Data
 
-| Item | V1 configuration |
-|---|---|
-| Instrument | XAUUSD |
-| Timeframe | M5 |
-| Approx. candles | 139,751 |
-| Historical period | Approximately 2 years |
-| Source | MetaTrader 5 |
-| Session timezone | Asia/Kolkata (IST) |
+|Item|V1 configuration|
+|-|-|
+|Instrument|XAUUSD|
+|Timeframe|M5|
+|Approx. candles|139,751|
+|Historical period|Approximately 2 years|
+|Source|MetaTrader 5|
+|Session timezone|Asia/Kolkata (IST)|
 
 Market-closure/weekend gaps are retained as gaps rather than being filled with synthetic candles.
 
 Because MT5 data is broker-dependent, another broker may produce different historical prices, candle availability, tick volumes, spreads, and contract specifications.
 
----
+\---
 
-## 3. Session Definition
+## 3\. Session Definition
 
 V1 uses two predefined sessions:
 
-| Session | IST window |
-|---|---:|
-| Morning | 03:30–06:00 |
-| US Open | 18:55–19:55 |
+|Session|IST window|
+|-|-:|
+|Morning|03:30–06:00|
+|US Open|18:55–19:55|
 
 Weekdays are used for session-profile construction. Sessions with insufficient candle availability are excluded from profile generation.
 
----
+\---
 
-## 4. Volume Profile Method
+## 4\. Volume Profile Method
 
 The Fixed Range Volume Profile is calculated over the candles belonging to each valid session.
 
 ### Configuration
 
-- Number of price bins: **100**
-- Value area: **70%**
-- Volume input: **MT5 tick volume**
+* Number of price bins: **100**
+* Value area: **70%**
+* Volume input: **MT5 tick volume**
 
 The output levels are:
 
-- POC — Point of Control
-- VAH — Value Area High
-- VAL — Value Area Low
+* POC — Point of Control
+* VAH — Value Area High
+* VAL — Value Area Low
 
 The implementation distributes candle volume across the price range represented by each candle rather than using exchange-traded centralized volume.
 
 Therefore, the profile should be understood as a **broker/tick-volume-based research approximation**, not centralized exchange volume.
 
----
+\---
 
-## 5. V1 Signal Model
+## 5\. V1 Signal Model
 
 ### Long
 
@@ -91,65 +91,65 @@ Maximum SL         = 15.00
 One trade/session  = True
 ```
 
----
+\---
 
-## 6. V1 Baseline Results
+## 6\. V1 Baseline Results
 
-| Metric | Result |
-|---|---:|
-| Total signals | 846 |
-| Closed trades | 844 |
-| Open trades | 2 |
-| Winners | 544 |
-| Losers | 300 |
-| Win rate | 64.45% |
-| Profit factor | 3.63 |
-| Net result | +788R |
-| Expectancy | +0.934R |
-| Max drawdown | -6R |
-| Max consecutive losses | 6 |
+|Metric|Result|
+|-|-:|
+|Total signals|846|
+|Closed trades|844|
+|Open trades|2|
+|Winners|544|
+|Losers|300|
+|Win rate|64.45%|
+|Profit factor|3.63|
+|Net result|+788R|
+|Expectancy|+0.934R|
+|Max drawdown|-6R|
+|Max consecutive losses|6|
 
 ### Session
 
-- Morning: 376 trades, 63.30% win rate, +338R
-- US Open: 468 trades, 65.38% win rate, +450R
+* Morning: 376 trades, 63.30% win rate, +338R
+* US Open: 468 trades, 65.38% win rate, +450R
 
 ### Profile level
 
-- VAH: 364 trades, 65.11% win rate, +347R
-- POC: 246 trades, 65.85% win rate, +240R
-- VAL: 234 trades, 61.97% win rate, +201R
+* VAH: 364 trades, 65.11% win rate, +347R
+* POC: 246 trades, 65.85% win rate, +240R
+* VAL: 234 trades, 61.97% win rate, +201R
 
 ### Direction
 
-- BUY: 463 trades, 66.31% win rate, +458R
-- SELL: 381 trades, 62.20% win rate, +330R
+* BUY: 463 trades, 66.31% win rate, +458R
+* SELL: 381 trades, 62.20% win rate, +330R
 
----
+\---
 
-## 7. $100K Fixed-Fractional Simulation
+## 7\. $100K Fixed-Fractional Simulation
 
 The separate capital model starts at $100,000 and risks 1% of the current balance on each closed trade.
 
-| Metric | Result |
-|---|---:|
-| Starting capital | $100,000 |
-| Risk/trade | 1% |
-| Closed trades | 844 |
-| Win rate | 64.45% |
-| Profit factor | 3.31 |
-| Total P&L | $233,811,631.31 |
-| Final balance | $233,911,631.31 |
-| Max drawdown | -$9,250,468.70 |
-| Max loss streak | 6 |
+|Metric|Result|
+|-|-:|
+|Starting capital|$100,000|
+|Risk/trade|1%|
+|Closed trades|844|
+|Win rate|64.45%|
+|Profit factor|3.31|
+|Total P\&L|$233,811,631.31|
+|Final balance|$233,911,631.31|
+|Max drawdown|-$9,250,468.70|
+|Max loss streak|6|
 
-This simulation is intentionally separated from the R-based strategy report because it represents a **hypothetical compounding model**, not actual brokerage P&L.
+This simulation is intentionally separated from the R-based strategy report because it represents a **hypothetical compounding model**, not actual brokerage P\&L.
 
 The enormous nominal growth should not be interpreted as a realistic forecast. Fixed-percentage compounding mathematically scales the dollar outcome as the simulated balance increases, while real-world execution, liquidity, margin, spread, slippage, and position-size constraints would materially change results.
 
----
+\---
 
-## 8. Bias Audit — V1
+## 8\. Bias Audit — V1
 
 ### 8.1 Same-candle entry look-ahead bias
 
@@ -183,37 +183,37 @@ V2 must explicitly define **when the profile becomes known** and ensure no futur
 
 V1 does not model:
 
-- Bid/ask spread
-- Commission
-- Slippage
-- Swap/financing
-- Liquidity constraints
-- Broker contract specifications
-- Margin requirements
+* Bid/ask spread
+* Commission
+* Slippage
+* Swap/financing
+* Liquidity constraints
+* Broker contract specifications
+* Margin requirements
 
 These are planned for later versions.
 
----
+\---
 
-## 9. What V1 Establishes
+## 9\. What V1 Establishes
 
 V1 successfully establishes the research infrastructure needed for subsequent testing:
 
-- Historical M5 data acquisition
-- Session classification
-- Session profile construction
-- POC/VAH/VAL extraction
-- Mechanical trade generation
-- Trade-level exports
-- Risk-based capital simulation
-- Basic performance decomposition
-- Explicit bias documentation
+* Historical M5 data acquisition
+* Session classification
+* Session profile construction
+* POC/VAH/VAL extraction
+* Mechanical trade generation
+* Trade-level exports
+* Risk-based capital simulation
+* Basic performance decomposition
+* Explicit bias documentation
 
 V1 does **not** establish that the strategy is profitable in live trading.
 
----
+\---
 
-## 10. V2 Research Questions
+## 10\. V2 Research Questions
 
 V2 should answer:
 
@@ -224,9 +224,9 @@ V2 should answer:
 5. Does performance remain stable across sessions, months, and market regimes?
 6. Does the edge survive out-of-sample data?
 
----
+\---
 
-## 11. Validation Roadmap
+## 11\. Validation Roadmap
 
 ```text
 V1  Baseline implementation
@@ -245,11 +245,12 @@ Final research conclusion
 A strategy should only move toward deployment after surviving these validation stages.
 
 
----
 
----
+\---
 
-## 12. V2 Causal Specification
+\---
+
+## 12\. V2 Causal Specification
 
 V2 keeps V1 frozen as the historical baseline and introduces a separate causal specification.
 
@@ -302,7 +303,7 @@ The V2 implementation was subjected to structural validation before performance 
 | RR mean | 2.000 |
 | Sessions with more than 1 trade | 0 |
 | Valid exits | 124 / 124 |
-| Maximum P&L calculation difference | 0 |
+| Maximum P\&L calculation difference | 0 |
 
 ### Final Validation Status
 
@@ -319,58 +320,59 @@ Structural validation passing does not establish profitability.
 
 
 
----
 
-## 14. V2 Performance Results
+\---
+
+## 14\. V2 Performance Results
 
 The V2 specification generated substantially fewer trades than V1.
 
-| Metric | V1 | V2 |
-|---|---:|---:|
-| Trades | 846 | 124 |
-| Win rate | 64.30% | 28.23% |
-| Total R | +788.00R | -18.74R |
-| Average R | +0.934R | -0.151R |
-| Profit factor | 3.63 | 0.79 |
-| Max drawdown | -6.00R | -23.74R |
+|Metric|V1|V2|
+|-|-:|-:|
+|Trades|846|124|
+|Win rate|64.30%|28.23%|
+|Total R|+788.00R|-18.74R|
+|Average R|+0.934R|-0.151R|
+|Profit factor|3.63|0.79|
+|Max drawdown|-6.00R|-23.74R|
 
 ### V2 Session Breakdown
 
-| Session | Trades | Total R | Average R |
-|---|---:|---:|---:|
-| MORNING | 46 | +2.256R | +0.049R |
-| US OPEN | 78 | -21.000R | -0.269R |
+|Session|Trades|Total R|Average R|
+|-|-:|-:|-:|
+|MORNING|46|+2.256R|+0.049R|
+|US OPEN|78|-21.000R|-0.269R|
 
 ### V2 Direction Breakdown
 
-| Direction | Trades | Total R | Average R |
-|---|---:|---:|---:|
-| BUY | 54 | -3.000R | -0.056R |
-| SELL | 70 | -15.744R | -0.225R |
+|Direction|Trades|Total R|Average R|
+|-|-:|-:|-:|
+|BUY|54|-3.000R|-0.056R|
+|SELL|70|-15.744R|-0.225R|
 
 ### V2 Profile-Level Breakdown
 
-| Level | Trades | Total R | Average R |
-|---|---:|---:|---:|
-| POC | 41 | -4.744R | -0.116R |
-| VAH | 44 | -8.000R | -0.182R |
-| VAL | 39 | -6.000R | -0.154R |
+|Level|Trades|Total R|Average R|
+|-|-:|-:|-:|
+|POC|41|-4.744R|-0.116R|
+|VAH|44|-8.000R|-0.182R|
+|VAL|39|-6.000R|-0.154R|
 
 ### V2 Exit Breakdown
 
-| Exit | Trades | R contribution |
-|---|---:|---:|
-| Stop Loss | 88 | -88R |
-| Take Profit | 35 | +70R |
-| Time Exit | 1 | -0.744R |
+|Exit|Trades|R contribution|
+|-|-:|-:|
+|Stop Loss|88|-88R|
+|Take Profit|35|+70R|
+|Time Exit|1|-0.744R|
 
 Average entry delay was exactly 5 minutes for all V2 trades because entries occur at the next M5 candle open.
 
 
 
----
+\---
 
-## 15. V1 vs V2 Interpretation
+## 15\. V1 vs V2 Interpretation
 
 The V2 results should not be described simply as the cost of look-ahead bias.
 
@@ -387,9 +389,9 @@ V2 should be treated as a research milestone rather than a final conclusion beca
 
 
 
----
+\---
 
-## 16. Current Research Status
+## 16\. Current Research Status
 
 ```text
 V1
@@ -418,7 +420,7 @@ The V2 trade logic itself is not modified. Instead, spread, commission, and slip
 
 ### Important Assumption
 
-The current V3 cost parameters are **research sensitivity scenarios**, not verified broker-specific execution costs.
+The current V3 cost parameters are \*\*research sensitivity scenarios\*\*, not verified broker-specific execution costs.
 
 Actual trading costs can vary with:
 
@@ -555,7 +557,7 @@ Entry execution follows the V2 causal model:
 
 OOS Period:
 
-**2025-09-12 → 2026-09-11**
+\*\*2025-09-12 → 2026-09-11\*\*
 
 | Metric | V4 OOS |
 |---|---:|
@@ -574,7 +576,7 @@ OOS Period:
 | Session | Trades | Total R | Mean R |
 |---|---:|---:|---:|
 | MORNING | 23 | +1.00R | +0.043R |
-| US_OPEN | 37 | -10.00R | -0.270R |
+| US\_OPEN | 37 | -10.00R | -0.270R |
 
 ### Direction Breakdown
 
@@ -602,7 +604,7 @@ OOS Period:
 
 ## 21.5 Structural Validation
 
-V4 OOS structural validation was performed using `src/v4_validation.py`.
+V4 OOS structural validation was performed using `src/v4\_validation.py`.
 
 All checks passed:
 
@@ -619,7 +621,7 @@ All checks passed:
 
 Final validation status:
 
-**V4 OOS STRUCTURAL VALIDATION: PASSED**
+\*\*V4 OOS STRUCTURAL VALIDATION: PASSED\*\*
 
 ---
 
@@ -650,3 +652,70 @@ The result should be interpreted as evidence about this historical holdout perio
 V4 is retained as a chronological robustness check before further strategy development.
 
 ---
+
+
+
+
+
+
+
+\---
+
+
+
+\# 22. V5 Candle-Body Confirmation Experiment
+
+
+
+\## Objective
+
+
+
+V5 introduces a single predefined entry-quality filter to the causal V2 strategy.
+
+
+
+The purpose was to test whether requiring stronger candle-body confirmation at the signal candle improves the robustness of the existing setup.
+
+
+
+This was a predefined research experiment and was not optimized against the test results.
+
+
+
+\## V5 Rule Change
+
+
+
+V5 preserves the V2 causal framework:
+
+
+
+\- Previous completed session profile is used.
+
+\- Signal is generated only after the signal candle closes.
+
+\- Entry occurs at the next M5 candle open.
+
+\- Risk/reward target remains 2R.
+
+\- Swing-based stop-loss remains unchanged.
+
+\- One trade per session remains enabled.
+
+\- Same-candle SL/TP collision is handled conservatively with SL first.
+
+
+
+\### New Filter
+
+
+
+For the signal candle:
+
+
+
+```text
+
+body\_ratio = abs(close - open) / (high - low)
+
