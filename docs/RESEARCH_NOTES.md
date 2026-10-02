@@ -719,3 +719,22 @@ For the signal candle:
 
 body\_ratio = abs(close - open) / (high - low)
 
+
+
+# 23. V6 Body-Ratio Threshold Experiment
+
+## Objective
+
+V6 tests a predefined entry-quality hypothesis on the causal V2 framework.
+
+The V5 experiment required a signal-candle body ratio of at least 0.50. V6 increases this threshold to 0.70 without changing the core causal profile methodology, risk-reward structure, session rules, or one-trade-per-session constraint.
+
+This is a predefined research experiment and was not selected by optimizing the OOS period.
+
+## V6 Rule Change
+
+The only strategy change from V5 is:
+
+```text
+V5 body ratio threshold: >= 0.50
+V6 body ratio threshold: >= 0.70
