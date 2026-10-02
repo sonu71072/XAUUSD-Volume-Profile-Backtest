@@ -487,3 +487,166 @@ Hypothetical Cost Sensitivity
         ↓
 Next
 Out-of-Sample / Walk-Forward Testing
+
+
+
+---
+
+# 21. V4 Chronological Out-of-Sample Validation
+
+## 21.1 Objective
+
+V4 introduces a chronological out-of-sample (OOS) evaluation of the V2 causal strategy.
+
+The purpose is to evaluate the existing V2 rule specification on a later, previously unseen market period without changing the core strategy rules.
+
+V4 is a validation experiment, not a claim of future profitability or live trading performance.
+
+---
+
+## 21.2 Dataset Split
+
+The available XAUUSD M5 dataset covers:
+
+- Start: 2024-09-12
+- End: 2026-09-11
+- Timeframe: M5
+
+Chronological split:
+
+### Development / In-Sample
+2024-09-12 → 2025-09-11
+
+### Out-of-Sample / Holdout
+2025-09-12 → 2026-09-11
+
+The OOS period is evaluated chronologically after the development period.
+
+The previous completed session profile can therefore be used for the first OOS sessions without using future information.
+
+---
+
+## 21.3 V4 Strategy Specification
+
+V4 uses the existing V2 causal strategy specification.
+
+Key parameters:
+
+- Risk/Reward: 2.0R
+- Level tolerance: 0.50
+- Swing lookback: 3 candles
+- Minimum SL distance: 0.30
+- Maximum SL distance: 15.0
+- One trade per session: Yes
+- Maximum exit duration: 300 candles
+- Timezone: Asia/Kolkata
+
+Entry execution follows the V2 causal model:
+
+1. Signal candle closes.
+2. Signal is evaluated using information available at that close.
+3. Entry occurs at the next M5 candle open.
+4. Previous completed session profile is used.
+5. Same-candle SL/TP collision is handled conservatively with SL first.
+
+---
+
+## 21.4 OOS Backtest Results
+
+OOS Period:
+
+**2025-09-12 → 2026-09-11**
+
+| Metric | V4 OOS |
+|---|---:|
+| Total Trades | 60 |
+| Winners | 17 |
+| Losers | 43 |
+| Win Rate | 28.33% |
+| Profit Factor | 0.79 |
+| Total R | -9.00R |
+| Expectancy | -0.150R |
+| Maximum Drawdown | -10.00R |
+| Maximum Loss Streak | 6 |
+
+### Session Breakdown
+
+| Session | Trades | Total R | Mean R |
+|---|---:|---:|---:|
+| MORNING | 23 | +1.00R | +0.043R |
+| US_OPEN | 37 | -10.00R | -0.270R |
+
+### Direction Breakdown
+
+| Direction | Trades | Total R | Mean R |
+|---|---:|---:|---:|
+| BUY | 25 | +8.00R | +0.320R |
+| SELL | 35 | -17.00R | -0.486R |
+
+### Level Breakdown
+
+| Level | Trades | Total R | Mean R |
+|---|---:|---:|---:|
+| POC | 15 | +3.00R | +0.200R |
+| VAH | 26 | -14.00R | -0.538R |
+| VAL | 19 | +2.00R | +0.105R |
+
+### Exit Breakdown
+
+| Exit | Trades | Total R |
+|---|---:|---:|
+| SL | 43 | -43.00R |
+| TP | 17 | +34.00R |
+
+---
+
+## 21.5 Structural Validation
+
+V4 OOS structural validation was performed using `src/v4_validation.py`.
+
+All checks passed:
+
+- OOS date integrity: 60/60
+- Profile causality: 60/60
+- Entry after signal: 60/60
+- Entry delay: exactly 5 minutes
+- One trade per session: PASS
+- Risk/Reward: exactly 2.000
+- Exit after entry: 60/60
+- PnL consistency: zero difference
+- Exit reasons: 60/60
+- Trade count: 60
+
+Final validation status:
+
+**V4 OOS STRUCTURAL VALIDATION: PASSED**
+
+---
+
+## 21.6 Interpretation
+
+The V4 chronological holdout produced results very close to the full-period V2 results.
+
+V2 full-period result:
+
+- 124 trades
+- 28.23% win rate
+- 0.79 profit factor
+- -18.74R total
+- -0.151R expectancy
+
+V4 OOS result:
+
+- 60 trades
+- 28.33% win rate
+- 0.79 profit factor
+- -9.00R total
+- -0.150R expectancy
+
+The OOS evaluation therefore does not show a material improvement in the current V2 strategy specification.
+
+The result should be interpreted as evidence about this historical holdout period only. It does not establish future profitability, live-trading viability, or broker-executable performance.
+
+V4 is retained as a chronological robustness check before further strategy development.
+
+---
