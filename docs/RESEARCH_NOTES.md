@@ -1,762 +1,940 @@
-# V1 Research Notes
+# Research Notes — XAUUSD Volume Profile Backtest
 
-## 1\. Research Objective
+This document records the research evolution of the XAUUSD Volume Profile strategy from the original V1 implementation through the V7 experimental framework.
 
-The objective of this project is to build a reproducible Python research framework for evaluating a mechanically defined XAUUSD M5 scalping strategy based on session-specific Fixed Range Volume Profile levels.
+The purpose of this document is to preserve:
 
-The project is not intended to establish profitability from a single historical backtest. The longer-term objective is to determine whether the strategy remains statistically and economically meaningful after controlling for information timing, transaction costs, execution assumptions, and out-of-sample performance.
+- strategy assumptions
+- data methodology
+- execution logic
+- validation procedures
+- transaction-cost assumptions
+- out-of-sample testing
+- experimental modifications
+- structural validation
+- limitations
+- conclusions from each research stage
 
-\---
+The versions are intentionally preserved separately so that previous experiments remain reproducible.
 
-## 2\. Data
+---
 
-|Item|V1 configuration|
-|-|-|
-|Instrument|XAUUSD|
-|Timeframe|M5|
-|Approx. candles|139,751|
-|Historical period|Approximately 2 years|
-|Source|MetaTrader 5|
-|Session timezone|Asia/Kolkata (IST)|
+# 1. Research Objective
 
-Market-closure/weekend gaps are retained as gaps rather than being filled with synthetic candles.
+The objective of this project is to investigate whether a mechanical XAUUSD trading strategy based on:
 
-Because MT5 data is broker-dependent, another broker may produce different historical prices, candle availability, tick volumes, spreads, and contract specifications.
+- Fixed Range Volume Profile
+- Point of Control (POC)
+- Value Area High (VAH)
+- Value Area Low (VAL)
+- session-based market structure
+- price interaction with volume-profile levels
+- candle confirmation
+- predefined risk/reward
 
-\---
+can produce a repeatable trading edge when evaluated using historical M5 data.
 
-## 3\. Session Definition
+The project is research-oriented.
 
-V1 uses two predefined sessions:
+A positive backtest result is not treated as proof of future profitability.
 
-|Session|IST window|
-|-|-:|
-|Morning|03:30–06:00|
-|US Open|18:55–19:55|
-
-Weekdays are used for session-profile construction. Sessions with insufficient candle availability are excluded from profile generation.
-
-\---
-
-## 4\. Volume Profile Method
-
-The Fixed Range Volume Profile is calculated over the candles belonging to each valid session.
-
-### Configuration
-
-* Number of price bins: **100**
-* Value area: **70%**
-* Volume input: **MT5 tick volume**
-
-The output levels are:
-
-* POC — Point of Control
-* VAH — Value Area High
-* VAL — Value Area Low
-
-The implementation distributes candle volume across the price range represented by each candle rather than using exchange-traded centralized volume.
-
-Therefore, the profile should be understood as a **broker/tick-volume-based research approximation**, not centralized exchange volume.
-
-\---
-
-## 5\. V1 Signal Model
-
-### Long
-
-1. Price touches a profile level within the configured tolerance.
-2. Current candle closes above the level.
-3. Previous candle closed at or below the level.
-4. Stop loss is derived from the recent swing-low region.
-5. Target is 2R.
-6. One trade per session.
-
-### Short
-
-1. Price touches a profile level within the configured tolerance.
-2. Current candle closes below the level.
-3. Previous candle closed at or above the level.
-4. Stop loss is derived from the recent swing-high region.
-5. Target is 2R.
-6. One trade per session.
-
-### Parameters
+The workflow is:
 
 ```text
-RR                 = 2.0
-Level tolerance    = 0.50
-Swing lookback     = 3 candles
-Minimum SL         = 0.30
-Maximum SL         = 15.00
-One trade/session  = True
-```
-
-\---
-
-## 6\. V1 Baseline Results
-
-|Metric|Result|
-|-|-:|
-|Total signals|846|
-|Closed trades|844|
-|Open trades|2|
-|Winners|544|
-|Losers|300|
-|Win rate|64.45%|
-|Profit factor|3.63|
-|Net result|+788R|
-|Expectancy|+0.934R|
-|Max drawdown|-6R|
-|Max consecutive losses|6|
-
-### Session
-
-* Morning: 376 trades, 63.30% win rate, +338R
-* US Open: 468 trades, 65.38% win rate, +450R
-
-### Profile level
-
-* VAH: 364 trades, 65.11% win rate, +347R
-* POC: 246 trades, 65.85% win rate, +240R
-* VAL: 234 trades, 61.97% win rate, +201R
-
-### Direction
-
-* BUY: 463 trades, 66.31% win rate, +458R
-* SELL: 381 trades, 62.20% win rate, +330R
-
-\---
-
-## 7\. $100K Fixed-Fractional Simulation
-
-The separate capital model starts at $100,000 and risks 1% of the current balance on each closed trade.
-
-|Metric|Result|
-|-|-:|
-|Starting capital|$100,000|
-|Risk/trade|1%|
-|Closed trades|844|
-|Win rate|64.45%|
-|Profit factor|3.31|
-|Total P\&L|$233,811,631.31|
-|Final balance|$233,911,631.31|
-|Max drawdown|-$9,250,468.70|
-|Max loss streak|6|
-
-This simulation is intentionally separated from the R-based strategy report because it represents a **hypothetical compounding model**, not actual brokerage P\&L.
-
-The enormous nominal growth should not be interpreted as a realistic forecast. Fixed-percentage compounding mathematically scales the dollar outcome as the simulated balance increases, while real-world execution, liquidity, margin, spread, slippage, and position-size constraints would materially change results.
-
-\---
-
-## 8\. Bias Audit — V1
-
-### 8.1 Same-candle entry look-ahead bias
-
-The original V1 implementation uses the current candle close to confirm a signal but records the entry at that same candle's open.
-
-This is causally impossible because the candle's closing price is not known at the candle open.
-
-Correct sequence:
-
-```text
-Candle forms
-    ↓
-Candle closes
-    ↓
-Signal becomes known
-    ↓
-Next candle opens
-    ↓
-Entry
-```
-
-This is the primary reason V1 is considered a **baseline rather than a validated result**.
-
-### 8.2 Profile-information timing
-
-The session profile implementation uses the session's candle data to calculate profile levels. When those levels are used for signals within the same session, the timing of profile availability must be reviewed carefully.
-
-V2 must explicitly define **when the profile becomes known** and ensure no future session candles are used for a decision made earlier in the session.
-
-### 8.3 Execution realism
-
-V1 does not model:
-
-* Bid/ask spread
-* Commission
-* Slippage
-* Swap/financing
-* Liquidity constraints
-* Broker contract specifications
-* Margin requirements
-
-These are planned for later versions.
-
-\---
-
-## 9\. What V1 Establishes
-
-V1 successfully establishes the research infrastructure needed for subsequent testing:
-
-* Historical M5 data acquisition
-* Session classification
-* Session profile construction
-* POC/VAH/VAL extraction
-* Mechanical trade generation
-* Trade-level exports
-* Risk-based capital simulation
-* Basic performance decomposition
-* Explicit bias documentation
-
-V1 does **not** establish that the strategy is profitable in live trading.
-
-\---
-
-## 10\. V2 Research Questions
-
-V2 should answer:
-
-1. Does the strategy remain profitable when entries occur only after signal confirmation?
-2. Are profile levels available at the exact time the signal is generated?
-3. How much performance disappears after removing future information?
-4. Does the strategy survive realistic spread and slippage?
-5. Does performance remain stable across sessions, months, and market regimes?
-6. Does the edge survive out-of-sample data?
-
-\---
-
-## 11\. Validation Roadmap
-
-```text
-V1  Baseline implementation
+DATA
  ↓
-V2  Remove look-ahead / causal execution
+PROFILE
  ↓
-V3  Add spread + commission + slippage
+SIGNAL
  ↓
-V4  Out-of-sample + walk-forward testing
+EXECUTION
  ↓
-V5  Parameter sensitivity + Monte Carlo
+BACKTEST
  ↓
-Final research conclusion
-```
+COST MODEL
+ ↓
+OUT-OF-SAMPLE
+ ↓
+STRUCTURAL VALIDATION
+ ↓
+RESEARCH CONCLUSION
 
-A strategy should only move toward deployment after surviving these validation stages.
 
 
+2. Data Source
+Historical market data is collected from MetaTrader 5.
+Instrument:
+XAUUSD
 
-\---
+Timeframe:
+M5
 
-\---
+Historical period:
+2024-09-12 → 2026-09-11
 
-## 12\. V2 Causal Specification
+Total candles:
+139,751
 
-V2 keeps V1 frozen as the historical baseline and introduces a separate causal specification.
+The dataset contains:
+- Open
+- High
+- Low
+- Close
+- Tick Volume
+- Time
+Data is downloaded through the MT5 Python API.
+The research does not fill weekend or market-closure gaps artificially.
+3. Data Quality Checks
+Before strategy testing, the historical dataset was checked for:
+- duplicate timestamps
+- chronological ordering
+- missing timestamps
+- invalid OHLC values
+- timezone consistency
+- market-session boundaries
+Observed gaps are primarily associated with:
+- weekends
+- market closures
+- unavailable trading periods
+The dataset was therefore retained without artificially generating missing candles.
+4. Timezone Handling
+MT5 timestamps are handled in UTC.
+Session definitions are converted to India Standard Time (IST).
+Timezone conversion is performed explicitly rather than assuming that the source timestamps already represent local time.
+Research sessions:
+MORNING
+03:30 – 06:00 IST
 
-The primary changes are:
+US_OPEN
+18:55 – 19:55 IST
 
-1. Profile levels are derived from the previous completed session of the same session type.
-2. A signal is confirmed only after the signal candle closes.
-3. Entry occurs at the next candle open.
-4. Stop-loss and take-profit remain based on the same 2R framework used in V1.
-5. One trade per session is retained.
+Only weekdays are considered for session generation.
+5. Session Detection
+The session engine identifies M5 candles belonging to the predefined trading windows.
+For every valid session, the following information can be derived:
+- session date
+- session type
+- session start
+- session end
+- session candles
+- session high
+- session low
+- session volume
+Sessions with insufficient candles are excluded from profile construction.
+Example:
+MORNING
+03:30 → 06:00 IST
 
-### V2.1 Profile Assumption
+US_OPEN
+18:55 → 19:55 IST
 
-For each trading session, V2 uses the profile from the previous completed session of the same type.
+The session engine is responsible only for identifying the correct market window.
+Strategy logic is handled separately.
+6. Fixed Range Volume Profile
+The project uses a Fixed Range Volume Profile.
+The profile is constructed over the selected session range.
+The price range is divided into:
+100 price bins
 
-For example:
-
-```text
-Previous MORNING session
+Tick volume is distributed across the price structure according to the project implementation.
+The resulting profile is used to identify:
+- POC
+- VAH
+- VAL
+7. Point of Control
+The Point of Control (POC) is the price area with the highest accumulated volume within the selected profile.
+Conceptually:
+Highest Volume Price
         ↓
-Calculate POC / VAH / VAL
+       POC
+
+POC is used as a potential market reference level.
+The strategy does not assume that every interaction with POC automatically produces a valid trade.
+Additional signal conditions are applied depending on the strategy version.
+8. Value Area
+The project uses a 70% value-area concept.
+The resulting levels are:
+VAH = Value Area High
+POC = Point of Control
+VAL = Value Area Low
+
+Conceptually:
+VAH
+────────────
+     ↑
+ Value Area
+     ↓
+────────────
+POC
+────────────
+     ↓
+ Value Area
+     ↑
+────────────
+VAL
+
+V1–V6 experiments evaluate different combinations of these profile levels.
+V7 restricts the setup to POC only.
+9. Original V1 Research Baseline
+V1 was the initial strategy implementation.
+The objective was to establish a baseline before introducing stricter causal execution and validation.
+V1 used the current session profile and generated signals around profile levels.
+This version produced very strong historical results:
+Signals              : 846
+Closed Trades        : 844
+Win Rate             : 64.45%
+Profit Factor        : 3.63
+Total R              : +788R
+Average R            : +0.934R
+Maximum Drawdown     : -6R
+Maximum Loss Streak  : 6
+
+These results were treated as a research baseline rather than as proof of a tradable edge.
+10. V1 $100k Simulation
+A theoretical fixed-fractional simulation was also performed using:
+Starting Balance : $100,000
+Risk             : 1% of current balance per trade
+
+Historical result:
+Closed Trades    : 844
+Win Rate         : 64.45%
+Profit Factor    : 3.31
+Final Balance    : $233,911,631.31
+Total P&L        : $233,811,631.31
+Maximum Drawdown : -$9,250,468.70
+
+This result is purely theoretical.
+It assumes continuous compounding and does not represent realistic broker execution.
+It should therefore not be interpreted as an achievable live-trading result.
+11. Look-Ahead Bias Investigation
+The extremely strong V1 performance required additional investigation.
+The major research question became:
+Does the strategy know information from the same session that would not have been available at the time of entry?
+
+This led to the development of V2.
+The goal was to remove potential look-ahead bias.
+12. V2 — Causal Strategy
+V2 changed the profile construction logic.
+Instead of using the current session's completed profile, V2 uses:
+Previous completed session
+of the same session type
+
+Example:
+Current MORNING Session
         ↓
-Next MORNING session
+Use previous MORNING profile
+
+Current US_OPEN Session
         ↓
-Use those fixed levels for signals
-
-
-
----
-
-## 13. V2 Causal Validation
-
-The V2 implementation was subjected to structural validation before performance interpretation.
-
-| Check | Result |
-|---|---:|
-| Trades | 124 |
-| Profiles | 913 |
-| Signal to entry delay | 5.00 min |
-| Valid previous profiles | 124 / 124 |
-| Missing profile dates | 0 |
-| Duplicate session profiles | 0 |
-| Valid entries | 124 / 124 |
-| BUY SL valid | 54 / 54 |
-| BUY TP valid | 54 / 54 |
-| SELL SL valid | 70 / 70 |
-| SELL TP valid | 70 / 70 |
-| RR min | 2.000 |
-| RR max | 2.000 |
-| RR mean | 2.000 |
-| Sessions with more than 1 trade | 0 |
-| Valid exits | 124 / 124 |
-| Maximum P\&L calculation difference | 0 |
-
-### Final Validation Status
-
-```text
-V2.2 CAUSAL VALIDATION: PASSED
-
-
-```
-
-All structural validation checks passed.
-
-Structural validation passing does not establish profitability.
-
-
-
-
-
-\---
-
-## 14\. V2 Performance Results
-
-The V2 specification generated substantially fewer trades than V1.
-
-|Metric|V1|V2|
-|-|-:|-:|
-|Trades|846|124|
-|Win rate|64.30%|28.23%|
-|Total R|+788.00R|-18.74R|
-|Average R|+0.934R|-0.151R|
-|Profit factor|3.63|0.79|
-|Max drawdown|-6.00R|-23.74R|
-
-### V2 Session Breakdown
-
-|Session|Trades|Total R|Average R|
-|-|-:|-:|-:|
-|MORNING|46|+2.256R|+0.049R|
-|US OPEN|78|-21.000R|-0.269R|
-
-### V2 Direction Breakdown
-
-|Direction|Trades|Total R|Average R|
-|-|-:|-:|-:|
-|BUY|54|-3.000R|-0.056R|
-|SELL|70|-15.744R|-0.225R|
-
-### V2 Profile-Level Breakdown
-
-|Level|Trades|Total R|Average R|
-|-|-:|-:|-:|
-|POC|41|-4.744R|-0.116R|
-|VAH|44|-8.000R|-0.182R|
-|VAL|39|-6.000R|-0.154R|
-
-### V2 Exit Breakdown
-
-|Exit|Trades|R contribution|
-|-|-:|-:|
-|Stop Loss|88|-88R|
-|Take Profit|35|+70R|
-|Time Exit|1|-0.744R|
-
-Average entry delay was exactly 5 minutes for all V2 trades because entries occur at the next M5 candle open.
-
-
-
-\---
-
-## 15\. V1 vs V2 Interpretation
-
-The V2 results should not be described simply as the cost of look-ahead bias.
-
-V2 makes two material methodological changes:
-
-1. It removes the same-candle signal-confirmation/entry inconsistency present in V1.
-2. It replaces the same-session profile construction with a previous-completed-session profile specification.
-
-Therefore, the change from V1 to V2 measures the effect of moving to a more causal research specification, not an isolated estimate of look-ahead bias alone.
-
-The current V2 specification produces fewer signals, negative expectancy, negative total R, and a profit factor below 1.
-
-V2 should be treated as a research milestone rather than a final conclusion because the profile timing rule is itself a provisional specification and has not been established as the exact methodology of the reference strategy.
-
-
-
-\---
-
-## 16\. Current Research Status
-
-```text
-V1
-Baseline implementation
-        ↓
-V2
-Causal execution + previous-session profile
-        ↓
-V2 Validation
-PASSED
-        ↓
-Current result
-Negative expectancy
-        ↓
-Next research stage
-Transaction-cost modelling
-
-
----
-
-## 18. V3 Transaction Cost Model
-
-V3 evaluates the existing V2 trade set under hypothetical transaction-cost scenarios.
-
-The V2 trade logic itself is not modified. Instead, spread, commission, and slippage assumptions are applied to the exported V2 trades.
-
-### Important Assumption
-
-The current V3 cost parameters are \*\*research sensitivity scenarios\*\*, not verified broker-specific execution costs.
-
-Actual trading costs can vary with:
-
-- Broker
-- Account type
-- Market conditions
-- Time of day
-- Liquidity
-- Spread conditions
-- Execution quality
-- Commission schedule
-
-Therefore, V3 results should not be interpreted as actual live-trading costs.
-
-### Cost Scenarios
-
-| Scenario | Spread | Commission | Slippage |
-|---|---:|---:|---:|
-| BASELINE | 0.00 | 0.00R | 0.00 |
-| LOW COST | 0.10 | 0.02R | 0.05 |
-| MEDIUM COST | 0.20 | 0.04R | 0.10 |
-| HIGH COST | 0.40 | 0.08R | 0.20 |
-
-The price-based costs are converted into R using the original trade's entry-to-stop risk distance.
-
----
-
-## 19. V3 Results
-
-All four scenarios contain the same 124 V2 trades. Transaction costs reduce the R outcome while leaving the original trade win/loss classification unchanged.
-
-| Scenario | Trades | Win Rate | Total R | Average R | Profit Factor | Max DD |
-|---|---:|---:|---:|---:|---:|---:|
-| BASELINE | 124 | 28.23% | -18.74R | -0.151R | 0.789 | -23.74R |
-| LOW COST | 124 | 28.23% | -26.12R | -0.211R | 0.723 | -30.80R |
-| MEDIUM COST | 124 | 28.23% | -33.49R | -0.270R | 0.664 | -37.85R |
-| HIGH COST | 124 | 28.23% | -48.23R | -0.389R | 0.563 | -51.95R |
-
-### Total Cost Impact
-
-| Scenario | Total Cost |
-|---|---:|
-| BASELINE | 0.00R |
-| LOW COST | 7.37R |
-| MEDIUM COST | 14.75R |
-| HIGH COST | 29.49R |
-
-The V3 analysis shows how increasing assumed transaction costs progressively reduces the strategy's R-based performance.
-
-Because the underlying V2 result is already negative before costs, the cost scenarios make the resulting R performance more negative.
-
-This is a sensitivity analysis rather than evidence of actual broker execution performance.
-
----
-
-## 20. V3 Research Status
-
-```text
-V2 Causal Strategy
-        ↓
-V2 Structural Validation
-        ↓
-V3 Transaction Cost Model
-        ↓
-Hypothetical Cost Sensitivity
-        ↓
-Next
-Out-of-Sample / Walk-Forward Testing
-
-
-
----
-
-# 21. V4 Chronological Out-of-Sample Validation
-
-## 21.1 Objective
-
-V4 introduces a chronological out-of-sample (OOS) evaluation of the V2 causal strategy.
-
-The purpose is to evaluate the existing V2 rule specification on a later, previously unseen market period without changing the core strategy rules.
-
-V4 is a validation experiment, not a claim of future profitability or live trading performance.
-
----
-
-## 21.2 Dataset Split
-
-The available XAUUSD M5 dataset covers:
-
-- Start: 2024-09-12
-- End: 2026-09-11
-- Timeframe: M5
-
-Chronological split:
-
-### Development / In-Sample
-2024-09-12 → 2025-09-11
-
-### Out-of-Sample / Holdout
+Use previous US_OPEN profile
+
+This ensures that the profile used for the signal existed before the trading session began.
+13. V2 Execution Model
+V2 introduced a causal execution framework.
+Important rules:
+- signal is generated only after candle close
+- entry occurs on the next candle open
+- profile must already exist
+- no future candle information is used
+- one trade per session
+- predefined stop-loss
+- predefined take-profit
+- fixed risk/reward
+Risk/reward:
+Risk = 1R
+Reward = 2R
+
+Therefore:
+SL = -1R
+TP = +2R
+
+Additional execution constraints include:
+Swing Lookback : 3
+Tolerance      : 0.50
+Minimum SL     : 0.30
+Maximum SL     : 15
+Maximum Exit   : 300 candles
+
+Same-candle SL/TP conflicts are resolved conservatively according to the strategy implementation.
+14. V2 Results
+The causal version produced significantly weaker results:
+Trades          : 124
+Winners         : 35
+Losers          : 89
+Win Rate        : 28.23%
+Profit Factor   : 0.79
+Total R         : -18.74R
+Expectancy      : -0.151R
+Maximum DD      : -23.74R
+Max Loss Streak : 7
+
+This was an important research result.
+The original V1 performance was not preserved after causal execution was enforced.
+15. V2 Structural Validation
+The V2 implementation was tested for causal correctness.
+Validation included:
+- profile must exist before signal
+- profile date must precede execution
+- signal must occur before entry
+- entry must occur after signal
+- exactly one trade per session
+- entry must precede exit
+- TP must equal +2R
+- SL must equal -1R
+- P&L must match exit reason
+- valid exit reasons only
+The structural validation passed.
+This established V2 as a causal research implementation.
+16. V3 — Transaction Cost Model
+After establishing the causal framework, the next research question was:
+How sensitive is the strategy to realistic trading costs?
+
+V3 applied a hypothetical transaction-cost model to V2 trades.
+The model included:
+Spread
+Commission
+Slippage
+
+Three cost environments were tested.
+V3 Cost Scenarios
+Baseline
+Spread      : 0.00
+Commission  : 0.00R
+Slippage    : 0.00
+
+Result:
+Total R : -18.743965R
+PF      : 0.788786
+
+Low Cost
+Spread      : 0.10
+Commission  : 0.02R
+Slippage    : 0.05
+
+Result:
+Total R : -26.116598R
+PF      : 0.722615
+
+Medium Cost
+Spread      : 0.20
+Commission  : 0.04R
+Slippage    : 0.10
+
+Result:
+Total R : -33.489231R
+PF      : 0.663634
+
+High Cost
+Spread      : 0.40
+Commission  : 0.08R
+Slippage    : 0.20
+
+Result:
+Total R : -48.234497R
+PF      : 0.563012
+
+These assumptions are hypothetical and are not broker-specific execution measurements.
+17. V4 — Chronological Out-of-Sample Testing
+V4 introduced a historical out-of-sample period.
+OOS period:
 2025-09-12 → 2026-09-11
 
-The OOS period is evaluated chronologically after the development period.
+The OOS period is separated chronologically from the earlier research data.
+This prevents the strategy from being evaluated only on the same historical period used during development.
+18. V4 OOS Results
+Trades          : 60
+Winners         : 17
+Losers          : 43
+Win Rate        : 28.33%
+Profit Factor   : 0.79
+Total R         : -9R
+Expectancy      : -0.150R
+Maximum DD      : -10R
+Max Loss Streak : 6
+
+The OOS result remained negative.
+Therefore the causal strategy did not demonstrate a positive historical edge at this stage.
+19. V4 Structural Validation
+The V4 OOS implementation was checked for:
+- chronological separation
+- profile availability
+- signal timing
+- entry timing
+- trade count consistency
+- one trade per session
+- correct SL/TP
+- valid exit reasons
+- P&L consistency
+The structural validation passed.
+20. V5 — Candle Body Confirmation
+V5 introduced a candle body confirmation filter.
+Body ratio:
+Body Ratio = abs(Close - Open) / (High - Low)
+
+Minimum threshold:
+Body Ratio >= 0.50
+
+The objective was to remove weak candles and require stronger directional candle structure.
+21. V5 Full-Sample Results
+Trades          : 113
+Winners         : 34
+Losers          : 79
+Win Rate        : 30.09%
+Profit Factor   : 0.86
+Total R         : -11R
+Expectancy      : -0.097R
+Maximum DD      : -20R
+Max Loss Streak : 10
+
+The filter reduced the number of trades but did not produce a positive result.
+22. V5 OOS Results
+Trades          : 53
+Winners         : 15
+Losers          : 38
+Win Rate        : 28.30%
+Profit Factor   : 0.79
+Total R         : -8R
+Expectancy      : -0.151R
+Maximum DD      : -14R
+Max Loss Streak : 10
+
+The OOS result remained negative.
+23. V5 Validation
+Both full-sample and OOS structural validation passed.
+The validation framework included:
+- body ratio calculation
+- body ratio threshold
+- causal profile usage
+- entry timing
+- trade uniqueness
+- SL/TP consistency
+- exit ordering
+- P&L consistency
+Same-candle exits were handled according to the execution model.
+An entry candle may legitimately hit SL or TP depending on its OHLC range.
+Therefore:
+exit_time >= entry_time
+
+is the correct validation rule rather than requiring:
+exit_time > entry_time
+
+24. V6 — Body Ratio Threshold 0.70
+V6 increased the candle-strength requirement.
+V5:
+Body Ratio >= 0.50
+
+V6:
+Body Ratio >= 0.70
+
+All other major causal framework components were kept consistent.
+25. V6 OOS Results
+Trades          : 46
+Winners         : 16
+Losers          : 30
+Win Rate        : 34.78%
+Profit Factor   : 1.07
+Total R         : +2R
+Expectancy      : +0.043R
+Maximum DD      : -6R
+Max Loss Streak : 5
+
+Session breakdown:
+MORNING
+20 trades
++4R
+Mean +0.200R
+
+US_OPEN
+26 trades
+-2R
+Mean -0.077R
+
+Direction breakdown:
+BUY
+23 trades
++10R
+Mean +0.435R
+
+SELL
+23 trades
+-8R
+Mean -0.348R
+
+Level breakdown:
+POC
+20 trades
++1R
+
+VAH
+14 trades
+-2R
+
+VAL
+12 trades
++3R
+
+The V6 OOS result was positive but small.
+It was therefore treated as an experimental result requiring further testing rather than proof of a robust edge.
+26. V6 Structural Validation
+V6 OOS validation passed the causal and structural checks.
+The validation confirmed:
+- profile existed before session
+- profile was found for every trade
+- entry followed signal
+- entry delay was exactly 5 minutes
+- one trade per session
+- TP = +2R
+- SL = -1R
+- exit occurred after entry or on the same entry candle
+- valid exit reasons
+- P&L consistency
+- body ratio was present
+- body ratio threshold was respected
+- body ratio calculation was consistent
+27. V7 — POC-Only Experiment
+V7 was designed as a predefined experiment based on the V6 framework.
+V6 allowed:
+POC
+VAH
+VAL
+
+V7 restricted the strategy to:
+POC only
+
+The body confirmation remained:
+Body Ratio >= 0.70
+
+The purpose of V7 was to determine whether the observed V6 result was primarily associated with POC interactions.
+28. V7 Full-Sample Results
+Full historical sample:
+Trades          : 59
+Winners         : 22
+Losers          : 37
+Win Rate        : 37.29%
+Profit Factor   : 1.19
+Total R         : +7R
+Expectancy      : +0.119R
+Maximum DD      : -5R
+Max Loss Streak : 5
+
+Session breakdown:
+MORNING
+25 trades
++8R
+Mean +0.320R
+
+US_OPEN
+34 trades
+-1R
+Mean -0.029R
+
+Direction breakdown:
+BUY
+29 trades
++4R
+Mean +0.1379R
+
+SELL
+30 trades
++3R
+Mean +0.100R
+
+Level breakdown:
+POC
+59 trades
++7R
+Mean +0.119R
+
+Body ratio:
+Minimum : 0.704150
+Mean    : 0.837916
+Maximum : 1.000000
+
+The full-sample result was positive.
+However, full-sample profitability alone is not sufficient to establish a reliable trading edge.
+29. V7 Out-of-Sample Test
+V7 was evaluated on the chronological OOS period:
+2025-09-12 → 2026-09-11
+
+OOS candles:
+69,335
+
+OOS session candles:
+6,678
+
+30. V7 OOS Results
+Trades          : 27
+Winners         : 9
+Losers          : 18
+Win Rate        : 33.33%
+Profit Factor   : 1.00
+Total R         : 0.00R
+Expectancy      : 0.000R
+Maximum DD      : -5R
+Max Loss Streak : 5
+
+Session breakdown:
+MORNING
+13 trades
++2R
+Mean +0.154R
+
+US_OPEN
+14 trades
+-2R
+Mean -0.143R
+
+Direction breakdown:
+BUY
+15 trades
++6R
+Mean +0.400R
+
+SELL
+12 trades
+-6R
+Mean -0.500R
+
+Level breakdown:
+POC
+27 trades
+0.00R
+Mean 0.000R
+
+Exit breakdown:
+SL
+18 trades
+-18R
+
+TP
+9 trades
++18R
+
+Body ratio:
+Minimum : 0.704150
+Mean    : 0.790488
+Maximum : 1.000000
+
+31. V7 Interpretation
+The V7 full-sample result was:
++7R
+
+while the chronological OOS result was:
+0R
+
+Therefore:
+Positive full-sample result
+        ≠
+Established out-of-sample edge
+
+The OOS test did not demonstrate a positive historical expectancy.
+The correct research conclusion is:
+V7 does not establish a robust positive out-of-sample edge.
+
+This does not prove that the underlying market concept can never work.
+It means that the current mechanical specification has not produced sufficient historical evidence to justify claiming a robust edge.
+32. V7 Structural Validation
+The V7 full-sample validation passed.
+Validated conditions included:
+trade_count_positive
+profile_before_session
+all_profiles_found
+entry_after_signal
+entry_delay_exactly_5min
+one_trade_per_session
+tp_equals_2R
+sl_equals_minus_1R
+exit_after_entry
+valid_exit_reasons
+pnl_consistency
+body_ratio_present
+body_ratio_filter_70pct
+body_ratio_calculation_consistent
+stored_profile_date_valid
+
+Final result:
+V7 STRUCTURAL VALIDATION: PASSED
+
+33. V7 OOS Structural Validation
+The V7 OOS validation also passed.
+Validated conditions included:
+OOS period containment
+profile before session
+all profiles found
+profile date matches source
+entry after signal
+entry delay exactly 5 minutes
+one trade per session
+TP = +2R
+SL = -1R
+exit after entry
+valid exit reasons
+P&L consistency
+body ratio present
+body ratio >= 70%
+body ratio calculation consistency
+signal before/at entry
+entry before/at exit
+
+Final result:
+V7 OOS STRUCTURAL VALIDATION: PASSED
+
+This is important because a negative or neutral result is still useful research if the implementation is structurally valid.
+34. Research Evolution Summary
+The overall research progression is:
+V1
+↓
+Very strong historical result
+↓
+Look-ahead concern
+↓
+V2
+↓
+Causal execution
+↓
+Performance collapses
+↓
+V3
+↓
+Transaction-cost sensitivity
+↓
+V4
+↓
+Chronological OOS testing
+↓
+V5
+↓
+Body confirmation >= 0.50
+↓
+V6
+↓
+Body confirmation >= 0.70
+↓
+V7
+↓
+POC-only experiment
+↓
+OOS result = 0R
+
+This progression demonstrates why each layer of validation is necessary.
+35. Current Research Status
+Current tested versions:
+V1  Baseline
+V2  Causal
+V3  Cost Model
+V4  OOS
+V5  Body Ratio >= 0.50
+V6  Body Ratio >= 0.70
+V7  POC Only + Body Ratio >= 0.70
+
+Current evidence:
+V1
+Very strong historical result
+but not causal
+
+V2
+Negative
+
+V3
+Negative under costs
+
+V4
+Negative OOS
+
+V5
+Negative OOS
+
+V6
+Small positive OOS result
+
+V7
+Neutral OOS result
+
+Therefore, the current project status is:
+RESEARCH IN PROGRESS
+
+A robust positive edge has not yet been established.
+36. Important Research Principle
+The project intentionally avoids selecting a strategy only because it produced the highest historical return.
+Instead, the research process prioritizes:
+1. Causal execution
+2. No look-ahead
+3. Structural validation
+4. Transaction-cost sensitivity
+5. Chronological OOS testing
+6. Predefined experiments
+7. Reproducibility
+8. Honest interpretation
+A strategy that performs well in-sample but fails OOS is not considered validated.
+37. Reproducibility
+Each strategy version is maintained separately.
+This allows historical experiments to remain reproducible.
+The repository intentionally contains:
+v1
+v2
+v3
+v4
+v5
+v6
+v7
+
+rather than overwriting older versions.
+This prevents research history from being lost.
+38. Project Structure
+XAUUSD-Volume-Profile-Backtest/
+│
+├── src/
+│   ├── fetch_data.py
+│   ├── volume_profile.py
+│   ├── session_engine.py
+│   ├── session_profile.py
+│   ├── strategy_visual_check.py
+│   ├── strategy.py
+│   ├── backtest_100k.py
+│   │
+│   ├── session_profile_v2.py
+│   ├── strategy_v2.py
+│   ├── v2_audit.py
+│   ├── v2_validation.py
+│   │
+│   ├── v3_cost_model.py
+│   │
+│   ├── v4_oos_backtest.py
+│   ├── v4_validation.py
+│   │
+│   ├── v5_strategy.py
+│   ├── v5_validation.py
+│   ├── v5_oos_backtest.py
+│   ├── v5_oos_validation.py
+│   │
+│   ├── v6_strategy.py
+│   ├── v6_oos_backtest.py
+│   ├── v6_oos_validation.py
+│   │
+│   ├── v7_strategy.py
+│   ├── v7_validation.py
+│   ├── v7_oos_backtest.py
+│   └── v7_oos_validation.py
+│
+├── tests/
+│   └── test_volume_profile.py
+│
+├── docs/
+│   ├── GITHUB_UPLOAD.md
+│   └── RESEARCH_NOTES.md
+│
+├── data/
+│   └── *.csv
+│
+├── README.md
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── requirements.txt
+└── .gitignore
+
+39. Limitations
+The current research has several limitations.
+Historical Data
+Backtests use historical market data.
+Historical performance cannot guarantee future performance.
+Tick Volume
+The volume profile uses MT5 tick volume rather than centralized exchange volume.
+Therefore, the volume distribution may differ from institutional or exchange-derived volume data.
+Execution
+Historical backtests cannot perfectly reproduce:
+- spread changes
+- slippage
+- execution latency
+- liquidity conditions
+- broker-specific fills
+- market gaps
+Transaction Costs
+V3 uses hypothetical cost assumptions.
+They are not verified broker-specific execution costs.
+Sample Size
+Later experiments such as V6 and V7 contain relatively few OOS trades.
+Small samples can produce unstable statistics.
+Market Regime
+The tested period represents only a limited historical market regime.
+The strategy may behave differently under:
+- high volatility
+- low volatility
+- news events
+- changing liquidity
+- structural market changes
+40. What Would Count as Stronger Evidence?
+Future research should ideally include:
+- larger OOS samples
+- multiple market regimes
+- rolling walk-forward validation
+- additional years of data
+- realistic broker spread data
+- realistic slippage assumptions
+- Monte Carlo analysis
+- parameter sensitivity analysis
+- stability testing
+- independent validation datasets
+- forward testing
+- paper trading
+- execution-quality analysis
+Parameter changes should be predefined before testing whenever possible.
+41. Research Philosophy
+The objective is not:
+Find the backtest with the highest profit.
+
+The objective is:
+Find out whether a repeatable market relationship
+survives increasingly realistic testing.
+
+The research process therefore follows:
+Hypothesis
+   ↓
+Implementation
+   ↓
+Backtest
+   ↓
+Audit
+   ↓
+Causal Validation
+   ↓
+Cost Model
+   ↓
+OOS Testing
+   ↓
+Structural Validation
+   ↓
+Interpretation
+
+A failed experiment is still valuable if it eliminates a hypothesis.
+42. Current Conclusion
+The project has successfully progressed from an extremely strong but potentially biased V1 baseline to a causal and structurally validated research framework.
+The major finding so far is:
+Removing potential look-ahead and applying chronological out-of-sample testing materially reduces the apparent performance of the original strategy.
+
+V6 produced a small positive OOS result, but V7 did not preserve that result after restricting the setup to POC-only.
+Therefore:
+No robust positive edge established yet.
+
+The next strategy modification should be treated as a new research experiment rather than as a guaranteed improvement.
+43. Final Research Rule
+Every new strategy version should follow:
+TEST
+ ↓
+VERIFY
+ ↓
+DOCUMENT
+ ↓
+GITHUB UPDATE
+ ↓
+NEXT EXPERIMENT
+
+No strategy should be considered validated merely because its historical equity curve looks attractive.
+The repository is intended to document the complete research process — including failed experiments, neutral results, and successful validation checks.
+Disclaimer
+This project is for educational and research purposes only.
+Backtested results are hypothetical and do not guarantee future performance.
+Nothing in this repository constitutes financial, investment, or trading advice.
+Trading XAUUSD and leveraged derivatives involves substantial risk of loss.
 
-The previous completed session profile can therefore be used for the first OOS sessions without using future information.
 
----
-
-## 21.3 V4 Strategy Specification
-
-V4 uses the existing V2 causal strategy specification.
-
-Key parameters:
-
-- Risk/Reward: 2.0R
-- Level tolerance: 0.50
-- Swing lookback: 3 candles
-- Minimum SL distance: 0.30
-- Maximum SL distance: 15.0
-- One trade per session: Yes
-- Maximum exit duration: 300 candles
-- Timezone: Asia/Kolkata
-
-Entry execution follows the V2 causal model:
-
-1. Signal candle closes.
-2. Signal is evaluated using information available at that close.
-3. Entry occurs at the next M5 candle open.
-4. Previous completed session profile is used.
-5. Same-candle SL/TP collision is handled conservatively with SL first.
-
----
-
-## 21.4 OOS Backtest Results
-
-OOS Period:
-
-\*\*2025-09-12 → 2026-09-11\*\*
-
-| Metric | V4 OOS |
-|---|---:|
-| Total Trades | 60 |
-| Winners | 17 |
-| Losers | 43 |
-| Win Rate | 28.33% |
-| Profit Factor | 0.79 |
-| Total R | -9.00R |
-| Expectancy | -0.150R |
-| Maximum Drawdown | -10.00R |
-| Maximum Loss Streak | 6 |
-
-### Session Breakdown
-
-| Session | Trades | Total R | Mean R |
-|---|---:|---:|---:|
-| MORNING | 23 | +1.00R | +0.043R |
-| US\_OPEN | 37 | -10.00R | -0.270R |
-
-### Direction Breakdown
-
-| Direction | Trades | Total R | Mean R |
-|---|---:|---:|---:|
-| BUY | 25 | +8.00R | +0.320R |
-| SELL | 35 | -17.00R | -0.486R |
-
-### Level Breakdown
-
-| Level | Trades | Total R | Mean R |
-|---|---:|---:|---:|
-| POC | 15 | +3.00R | +0.200R |
-| VAH | 26 | -14.00R | -0.538R |
-| VAL | 19 | +2.00R | +0.105R |
-
-### Exit Breakdown
-
-| Exit | Trades | Total R |
-|---|---:|---:|
-| SL | 43 | -43.00R |
-| TP | 17 | +34.00R |
-
----
-
-## 21.5 Structural Validation
-
-V4 OOS structural validation was performed using `src/v4\_validation.py`.
-
-All checks passed:
-
-- OOS date integrity: 60/60
-- Profile causality: 60/60
-- Entry after signal: 60/60
-- Entry delay: exactly 5 minutes
-- One trade per session: PASS
-- Risk/Reward: exactly 2.000
-- Exit after entry: 60/60
-- PnL consistency: zero difference
-- Exit reasons: 60/60
-- Trade count: 60
-
-Final validation status:
-
-\*\*V4 OOS STRUCTURAL VALIDATION: PASSED\*\*
-
----
-
-## 21.6 Interpretation
-
-The V4 chronological holdout produced results very close to the full-period V2 results.
-
-V2 full-period result:
-
-- 124 trades
-- 28.23% win rate
-- 0.79 profit factor
-- -18.74R total
-- -0.151R expectancy
-
-V4 OOS result:
-
-- 60 trades
-- 28.33% win rate
-- 0.79 profit factor
-- -9.00R total
-- -0.150R expectancy
-
-The OOS evaluation therefore does not show a material improvement in the current V2 strategy specification.
-
-The result should be interpreted as evidence about this historical holdout period only. It does not establish future profitability, live-trading viability, or broker-executable performance.
-
-V4 is retained as a chronological robustness check before further strategy development.
-
----
-
-
-
-
-
-
-
-\---
-
-
-
-\# 22. V5 Candle-Body Confirmation Experiment
-
-
-
-\## Objective
-
-
-
-V5 introduces a single predefined entry-quality filter to the causal V2 strategy.
-
-
-
-The purpose was to test whether requiring stronger candle-body confirmation at the signal candle improves the robustness of the existing setup.
-
-
-
-This was a predefined research experiment and was not optimized against the test results.
-
-
-
-\## V5 Rule Change
-
-
-
-V5 preserves the V2 causal framework:
-
-
-
-\- Previous completed session profile is used.
-
-\- Signal is generated only after the signal candle closes.
-
-\- Entry occurs at the next M5 candle open.
-
-\- Risk/reward target remains 2R.
-
-\- Swing-based stop-loss remains unchanged.
-
-\- One trade per session remains enabled.
-
-\- Same-candle SL/TP collision is handled conservatively with SL first.
-
-
-
-\### New Filter
-
-
-
-For the signal candle:
-
-
-
-```text
-
-body\_ratio = abs(close - open) / (high - low)
-
-
-
-# 23. V6 Body-Ratio Threshold Experiment
-
-## Objective
-
-V6 tests a predefined entry-quality hypothesis on the causal V2 framework.
-
-The V5 experiment required a signal-candle body ratio of at least 0.50. V6 increases this threshold to 0.70 without changing the core causal profile methodology, risk-reward structure, session rules, or one-trade-per-session constraint.
-
-This is a predefined research experiment and was not selected by optimizing the OOS period.
-
-## V6 Rule Change
-
-The only strategy change from V5 is:
-
-```text
-V5 body ratio threshold: >= 0.50
-V6 body ratio threshold: >= 0.70
-
-
-
-# 24. V7 POC-Only Experiment
-
-## Objective
-
-V7 tests whether restricting the validated V6 setup to the Point of Control (POC) improves historical robustness.
-
-V6 allowed signals at POC, VAH and VAL with a signal-candle body ratio of at least 0.70.
-
-V7 removes VAH and VAL entries and permits signals only at POC.
-
-This was a predefined structural hypothesis. The OOS period was not used to select the POC-only rule.
-
-## V7 Rule Change
-
-The V7 change is:
-
-```text
-V6: POC + VAH + VAL
-V7: POC only
