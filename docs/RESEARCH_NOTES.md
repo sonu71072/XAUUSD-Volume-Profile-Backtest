@@ -243,3 +243,166 @@ Final research conclusion
 ```
 
 A strategy should only move toward deployment after surviving these validation stages.
+
+
+---
+
+---
+
+## 12. V2 Causal Specification
+
+V2 keeps V1 frozen as the historical baseline and introduces a separate causal specification.
+
+The primary changes are:
+
+1. Profile levels are derived from the previous completed session of the same session type.
+2. A signal is confirmed only after the signal candle closes.
+3. Entry occurs at the next candle open.
+4. Stop-loss and take-profit remain based on the same 2R framework used in V1.
+5. One trade per session is retained.
+
+### V2.1 Profile Assumption
+
+For each trading session, V2 uses the profile from the previous completed session of the same type.
+
+For example:
+
+```text
+Previous MORNING session
+        ↓
+Calculate POC / VAH / VAL
+        ↓
+Next MORNING session
+        ↓
+Use those fixed levels for signals
+
+
+
+---
+
+## 13. V2 Causal Validation
+
+The V2 implementation was subjected to structural validation before performance interpretation.
+
+| Check | Result |
+|---|---:|
+| Trades | 124 |
+| Profiles | 913 |
+| Signal to entry delay | 5.00 min |
+| Valid previous profiles | 124 / 124 |
+| Missing profile dates | 0 |
+| Duplicate session profiles | 0 |
+| Valid entries | 124 / 124 |
+| BUY SL valid | 54 / 54 |
+| BUY TP valid | 54 / 54 |
+| SELL SL valid | 70 / 70 |
+| SELL TP valid | 70 / 70 |
+| RR min | 2.000 |
+| RR max | 2.000 |
+| RR mean | 2.000 |
+| Sessions with more than 1 trade | 0 |
+| Valid exits | 124 / 124 |
+| Maximum P&L calculation difference | 0 |
+
+### Final Validation Status
+
+```text
+V2.2 CAUSAL VALIDATION: PASSED
+
+
+```
+
+All structural validation checks passed.
+
+Structural validation passing does not establish profitability.
+
+
+
+
+---
+
+## 14. V2 Performance Results
+
+The V2 specification generated substantially fewer trades than V1.
+
+| Metric | V1 | V2 |
+|---|---:|---:|
+| Trades | 846 | 124 |
+| Win rate | 64.30% | 28.23% |
+| Total R | +788.00R | -18.74R |
+| Average R | +0.934R | -0.151R |
+| Profit factor | 3.63 | 0.79 |
+| Max drawdown | -6.00R | -23.74R |
+
+### V2 Session Breakdown
+
+| Session | Trades | Total R | Average R |
+|---|---:|---:|---:|
+| MORNING | 46 | +2.256R | +0.049R |
+| US OPEN | 78 | -21.000R | -0.269R |
+
+### V2 Direction Breakdown
+
+| Direction | Trades | Total R | Average R |
+|---|---:|---:|---:|
+| BUY | 54 | -3.000R | -0.056R |
+| SELL | 70 | -15.744R | -0.225R |
+
+### V2 Profile-Level Breakdown
+
+| Level | Trades | Total R | Average R |
+|---|---:|---:|---:|
+| POC | 41 | -4.744R | -0.116R |
+| VAH | 44 | -8.000R | -0.182R |
+| VAL | 39 | -6.000R | -0.154R |
+
+### V2 Exit Breakdown
+
+| Exit | Trades | R contribution |
+|---|---:|---:|
+| Stop Loss | 88 | -88R |
+| Take Profit | 35 | +70R |
+| Time Exit | 1 | -0.744R |
+
+Average entry delay was exactly 5 minutes for all V2 trades because entries occur at the next M5 candle open.
+
+
+
+---
+
+## 15. V1 vs V2 Interpretation
+
+The V2 results should not be described simply as the cost of look-ahead bias.
+
+V2 makes two material methodological changes:
+
+1. It removes the same-candle signal-confirmation/entry inconsistency present in V1.
+2. It replaces the same-session profile construction with a previous-completed-session profile specification.
+
+Therefore, the change from V1 to V2 measures the effect of moving to a more causal research specification, not an isolated estimate of look-ahead bias alone.
+
+The current V2 specification produces fewer signals, negative expectancy, negative total R, and a profit factor below 1.
+
+V2 should be treated as a research milestone rather than a final conclusion because the profile timing rule is itself a provisional specification and has not been established as the exact methodology of the reference strategy.
+
+
+
+---
+
+## 16. Current Research Status
+
+```text
+V1
+Baseline implementation
+        ↓
+V2
+Causal execution + previous-session profile
+        ↓
+V2 Validation
+PASSED
+        ↓
+Current result
+Negative expectancy
+        ↓
+Next research stage
+Transaction-cost modelling
