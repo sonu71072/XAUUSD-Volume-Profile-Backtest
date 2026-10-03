@@ -4,33 +4,33 @@ This document records the research evolution of the XAUUSD Volume Profile strate
 
 The purpose of this document is to preserve:
 
-- strategy assumptions
-- data methodology
-- execution logic
-- validation procedures
-- transaction-cost assumptions
-- out-of-sample testing
-- experimental modifications
-- structural validation
-- limitations
-- conclusions from each research stage
+* strategy assumptions
+* data methodology
+* execution logic
+* validation procedures
+* transaction-cost assumptions
+* out-of-sample testing
+* experimental modifications
+* structural validation
+* limitations
+* conclusions from each research stage
 
 The versions are intentionally preserved separately so that previous experiments remain reproducible.
 
----
+\---
 
-# 1. Research Objective
+# 1\. Research Objective
 
 The objective of this project is to investigate whether a mechanical XAUUSD trading strategy based on:
 
-- Fixed Range Volume Profile
-- Point of Control (POC)
-- Value Area High (VAH)
-- Value Area Low (VAL)
-- session-based market structure
-- price interaction with volume-profile levels
-- candle confirmation
-- predefined risk/reward
+* Fixed Range Volume Profile
+* Point of Control (POC)
+* Value Area High (VAH)
+* Value Area Low (VAL)
+* session-based market structure
+* price interaction with volume-profile levels
+* candle confirmation
+* predefined risk/reward
 
 can produce a repeatable trading edge when evaluated using historical M5 data.
 
@@ -105,7 +105,7 @@ Research sessions:
 MORNING
 03:30 – 06:00 IST
 
-US_OPEN
+US\_OPEN
 18:55 – 19:55 IST
 
 Only weekdays are considered for session generation.
@@ -125,7 +125,7 @@ Example:
 MORNING
 03:30 → 06:00 IST
 
-US_OPEN
+US\_OPEN
 18:55 → 19:55 IST
 
 The session engine is responsible only for identifying the correct market window.
@@ -200,7 +200,7 @@ Closed Trades    : 844
 Win Rate         : 64.45%
 Profit Factor    : 3.31
 Final Balance    : $233,911,631.31
-Total P&L        : $233,811,631.31
+Total P\&L        : $233,811,631.31
 Maximum Drawdown : -$9,250,468.70
 
 This result is purely theoretical.
@@ -224,9 +224,9 @@ Current MORNING Session
         ↓
 Use previous MORNING profile
 
-Current US_OPEN Session
+Current US\_OPEN Session
         ↓
-Use previous US_OPEN profile
+Use previous US\_OPEN profile
 
 This ensures that the profile used for the signal existed before the trading session began.
 13. V2 Execution Model
@@ -281,7 +281,7 @@ Validation included:
 - entry must precede exit
 - TP must equal +2R
 - SL must equal -1R
-- P&L must match exit reason
+- P\&L must match exit reason
 - valid exit reasons only
 The structural validation passed.
 This established V2 as a causal research implementation.
@@ -364,7 +364,7 @@ The V4 OOS implementation was checked for:
 - one trade per session
 - correct SL/TP
 - valid exit reasons
-- P&L consistency
+- P\&L consistency
 The structural validation passed.
 20. V5 — Candle Body Confirmation
 V5 introduced a candle body confirmation filter.
@@ -409,14 +409,14 @@ The validation framework included:
 - trade uniqueness
 - SL/TP consistency
 - exit ordering
-- P&L consistency
+- P\&L consistency
 Same-candle exits were handled according to the execution model.
 An entry candle may legitimately hit SL or TP depending on its OHLC range.
 Therefore:
-exit_time >= entry_time
+exit\_time >= entry\_time
 
 is the correct validation rule rather than requiring:
-exit_time > entry_time
+exit\_time > entry\_time
 
 24. V6 — Body Ratio Threshold 0.70
 V6 increased the candle-strength requirement.
@@ -444,7 +444,7 @@ MORNING
 +4R
 Mean +0.200R
 
-US_OPEN
+US\_OPEN
 26 trades
 -2R
 Mean -0.077R
@@ -487,7 +487,7 @@ The validation confirmed:
 - SL = -1R
 - exit occurred after entry or on the same entry candle
 - valid exit reasons
-- P&L consistency
+- P\&L consistency
 - body ratio was present
 - body ratio threshold was respected
 - body ratio calculation was consistent
@@ -523,7 +523,7 @@ MORNING
 +8R
 Mean +0.320R
 
-US_OPEN
+US\_OPEN
 34 trades
 -1R
 Mean -0.029R
@@ -579,7 +579,7 @@ MORNING
 +2R
 Mean +0.154R
 
-US_OPEN
+US\_OPEN
 14 trades
 -2R
 Mean -0.143R
@@ -636,21 +636,21 @@ It means that the current mechanical specification has not produced sufficient h
 32. V7 Structural Validation
 The V7 full-sample validation passed.
 Validated conditions included:
-trade_count_positive
-profile_before_session
-all_profiles_found
-entry_after_signal
-entry_delay_exactly_5min
-one_trade_per_session
-tp_equals_2R
-sl_equals_minus_1R
-exit_after_entry
-valid_exit_reasons
-pnl_consistency
-body_ratio_present
-body_ratio_filter_70pct
-body_ratio_calculation_consistent
-stored_profile_date_valid
+trade\_count\_positive
+profile\_before\_session
+all\_profiles\_found
+entry\_after\_signal
+entry\_delay\_exactly\_5min
+one\_trade\_per\_session
+tp\_equals\_2R
+sl\_equals\_minus\_1R
+exit\_after\_entry
+valid\_exit\_reasons
+pnl\_consistency
+body\_ratio\_present
+body\_ratio\_filter\_70pct
+body\_ratio\_calculation\_consistent
+stored\_profile\_date\_valid
 
 Final result:
 V7 STRUCTURAL VALIDATION: PASSED
@@ -669,7 +669,7 @@ TP = +2R
 SL = -1R
 exit after entry
 valid exit reasons
-P&L consistency
+P\&L consistency
 body ratio present
 body ratio >= 70%
 body ratio calculation consistency
@@ -678,6 +678,156 @@ entry before/at exit
 
 Final result:
 V7 OOS STRUCTURAL VALIDATION: PASSED
+
+
+
+
+
+\## V8 — POC Distance Filter Experiment
+
+
+
+\### Objective
+
+
+
+V8 tests whether restricting entries to cases where the entry price remains close to the selected POC improves the V7 POC-only setup.
+
+
+
+\### Strategy Framework
+
+
+
+V8 preserves the V7 causal framework:
+
+
+
+\- Previous completed session profile
+
+\- POC-only level
+
+\- Body ratio >= 0.70
+
+\- Signal confirmation
+
+\- Next candle open execution
+
+\- 2R take-profit
+
+\- 1R stop-loss
+
+\- One trade per session
+
+\- Causal profile construction
+
+\- Chronological OOS testing
+
+
+
+\### Additional V8 Filter
+
+
+
+The entry-to-POC distance is normalized by initial trade risk:
+
+
+
+POC Distance Risk = |Entry - POC| / |Entry - Stop Loss|
+
+
+
+Maximum accepted distance:
+
+
+
+0.20R
+
+
+
+Trades exceeding this threshold are rejected.
+
+
+
+\### Full-Sample Results
+
+
+
+| Metric | V8 |
+
+|---|---:|
+
+| Trades | 31 |
+
+| Winners | 15 |
+
+| Losers | 16 |
+
+| Win Rate | 48.39% |
+
+| Profit Factor | 1.88 |
+
+| Total R | +14.00R |
+
+| Expectancy | +0.452R |
+
+| Max Drawdown | -4.00R |
+
+| Max Loss Streak | 4 |
+
+
+
+\### Out-of-Sample Results
+
+
+
+OOS period:
+
+
+
+2025-09-12 → 2026-09-12
+
+
+
+| Metric | V8 OOS |
+
+|---|---:|
+
+| Trades | 13 |
+
+| Win Rate | 53.85% |
+
+| Profit Factor | 2.33 |
+
+| Total R | +8.00R |
+
+| Expectancy | +0.615R |
+
+| Max Drawdown | -2.00R |
+
+
+
+Structural validation passed.
+
+
+
+\### Research Interpretation
+
+
+
+V8 produced positive results on the tested full sample and historical OOS period.
+
+
+
+However, the 0.20R POC-distance threshold was derived from full-sample analysis. Therefore, the full-sample result should not be treated as independent evidence.
+
+
+
+The OOS result is a historical holdout result under the tested methodology. It does not establish future or live trading profitability.
+
+
+
+Further research should test additional unseen periods, parameter sensitivity, and realistic transaction costs.
 
 This is important because a negative or neutral result is still useful research if the implementation is structurally valid.
 34. Research Evolution Summary
@@ -784,47 +934,47 @@ This prevents research history from being lost.
 XAUUSD-Volume-Profile-Backtest/
 │
 ├── src/
-│   ├── fetch_data.py
-│   ├── volume_profile.py
-│   ├── session_engine.py
-│   ├── session_profile.py
-│   ├── strategy_visual_check.py
+│   ├── fetch\_data.py
+│   ├── volume\_profile.py
+│   ├── session\_engine.py
+│   ├── session\_profile.py
+│   ├── strategy\_visual\_check.py
 │   ├── strategy.py
-│   ├── backtest_100k.py
+│   ├── backtest\_100k.py
 │   │
-│   ├── session_profile_v2.py
-│   ├── strategy_v2.py
-│   ├── v2_audit.py
-│   ├── v2_validation.py
+│   ├── session\_profile\_v2.py
+│   ├── strategy\_v2.py
+│   ├── v2\_audit.py
+│   ├── v2\_validation.py
 │   │
-│   ├── v3_cost_model.py
+│   ├── v3\_cost\_model.py
 │   │
-│   ├── v4_oos_backtest.py
-│   ├── v4_validation.py
+│   ├── v4\_oos\_backtest.py
+│   ├── v4\_validation.py
 │   │
-│   ├── v5_strategy.py
-│   ├── v5_validation.py
-│   ├── v5_oos_backtest.py
-│   ├── v5_oos_validation.py
+│   ├── v5\_strategy.py
+│   ├── v5\_validation.py
+│   ├── v5\_oos\_backtest.py
+│   ├── v5\_oos\_validation.py
 │   │
-│   ├── v6_strategy.py
-│   ├── v6_oos_backtest.py
-│   ├── v6_oos_validation.py
+│   ├── v6\_strategy.py
+│   ├── v6\_oos\_backtest.py
+│   ├── v6\_oos\_validation.py
 │   │
-│   ├── v7_strategy.py
-│   ├── v7_validation.py
-│   ├── v7_oos_backtest.py
-│   └── v7_oos_validation.py
+│   ├── v7\_strategy.py
+│   ├── v7\_validation.py
+│   ├── v7\_oos\_backtest.py
+│   └── v7\_oos\_validation.py
 │
 ├── tests/
-│   └── test_volume_profile.py
+│   └── test\_volume\_profile.py
 │
 ├── docs/
-│   ├── GITHUB_UPLOAD.md
-│   └── RESEARCH_NOTES.md
+│   ├── GITHUB\_UPLOAD.md
+│   └── RESEARCH\_NOTES.md
 │
 ├── data/
-│   └── *.csv
+│   └── \*.csv
 │
 ├── README.md
 ├── CHANGELOG.md
@@ -936,5 +1086,6 @@ This project is for educational and research purposes only.
 Backtested results are hypothetical and do not guarantee future performance.
 Nothing in this repository constitutes financial, investment, or trading advice.
 Trading XAUUSD and leveraged derivatives involves substantial risk of loss.
+
 
 

@@ -4,6 +4,48 @@ All notable changes to this project are documented here.
 
 ---
 
+## [V8] - POC Distance Filter Experiment
+
+### Added
+
+- Added `src/v8_strategy.py`
+- Added `src/v8_oos_backtest.py`
+- Added `src/v8_oos_validation.py`
+- Added POC distance-to-risk filtering
+- Added V8 full-sample and chronological OOS validation
+
+### V8 Rule
+
+V8 extends the V7 POC-only strategy with:
+
+```text
+POC Distance Risk = |Entry - POC| / |Entry - Stop Loss|
+
+Maximum allowed distance = 0.20R
+
+The existing V7 body-ratio confirmation threshold of 0.70 and causal execution framework remain unchanged.
+Results
+Full Sample
+- Trades: 31
+- Win Rate: 48.39%
+- Profit Factor: 1.88
+- Total R: +14.00R
+- Expectancy: +0.452R
+- Max Drawdown: -4.00R
+- Max Loss Streak: 4
+Out-of-Sample
+- Trades: 13
+- Win Rate: 53.85%
+- Profit Factor: 2.33
+- Total R: +8.00R
+- Expectancy: +0.615R
+- Max Drawdown: -2.00R
+V8 OOS structural validation passed.
+Research Note
+The 0.20R distance threshold was derived from full-sample analysis. Therefore, the full-sample improvement is not independent evidence. The OOS result represents a historical holdout test and does not establish future or live trading profitability.
+
+
+
 ## [V7] - 2026-10-03
 
 ### Added
